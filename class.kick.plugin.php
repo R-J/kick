@@ -14,6 +14,11 @@ $PluginInfo['kick'] = [
 
 class KickAssPlugin extends Gdn_Plugin {
     public function setup() {
+         // Default notification values. These values will only apply for users
+         // who haven't configured their notificaitions yet.
+        touchConfig('Preferences.Popup.Kick', 1);
+        touchConfig('Preferences.Email.Kick', 0);
+        // Init db changes.
         $this->structure();
     }
 
@@ -23,6 +28,7 @@ class KickAssPlugin extends Gdn_Plugin {
      * @return void.
      */
     public function structure() {
+        // Create a new activity.
         $activityModel = new ActivityModel();
         $activityModel->defineType(
             'Kick',
@@ -44,6 +50,9 @@ class KickAssPlugin extends Gdn_Plugin {
                 'Public' => '0'
             ]
         );
+
+        // Loop through all users and add notification setting if needed.
+        // TODO!
     }
 
     /**
@@ -102,6 +111,9 @@ class KickAssPlugin extends Gdn_Plugin {
             throw notFoundException('User');
         }
 
+        $userModel = new UserModel();
+        $profileUser = $userModel->getID($profileUserID);
+
         $activityModel = new activityModel();
         //  public function add($ActivityUserID, $ActivityType, $Story = null, $RegardingUserID = null, $CommentActivityID = null, $Route = null, $SendEmail = '')
 
@@ -109,10 +121,10 @@ class KickAssPlugin extends Gdn_Plugin {
         $activityModel->add(
             Gdn::session()->UserID, // ActivityUserID
             'Kick', // ActivityType
-            null, // Story
-            profileUserID, // RegardingUserID
-            null, // CommentActivityID
-            'profile', // 'link target', // Route
+            '', // Story
+            $profileUserID, // RegardingUserID
+            '', // CommentActivityID
+            userUrl($profileUser), // Route
             '' // SendEmail
         );
 
