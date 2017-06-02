@@ -16,6 +16,7 @@ class KickAssPlugin extends Gdn_Plugin {
     public function setup() {
          // Default notification values. These values will only apply for users
          // who haven't configured their notificaitions yet.
+        touchConfig('kick.UseDropDownButton', false);
         touchConfig('Preferences.Popup.Kick', 1);
         touchConfig('Preferences.Email.Kick', 0);
         // Init db changes.
@@ -77,27 +78,41 @@ class KickAssPlugin extends Gdn_Plugin {
    public function profileController_beforeProfileOptions_handler($sender) {
         $sessionUserID = Gdn::session()->UserID;
         $profileUserID = $sender->User->UserID;
+
+        // Exit if this is the visitors own profile or visitor is guest.
         if ($profileUserID == $sessionUserID || $sessionUserID < 1) {
-            // Exit if this is visitors own profile or visitor is guest.
             return;
         }
 
-        // echo '<div class="KickWrapper">';
-        echo anchor(
-            trim(sprite('SpKick').' '.t('Kick')),
-            '/plugin/kick/'.$sender->User->UserID.'?tk='.Gdn::session()->transientKey(),
-            [
-                'class' => 'Button NavButton KickButton Hijack',
-                // 'onClick' => 'gdn.inform("kicked");'
-            ]
-        );
-        // echo '</div>';
+        $text = trim(sprite('SpKick').' '.t('Kick'));
+        $url = '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
+
+        if (c('kick.UseDropDownButton', false)) {
+            // Enhance messge button on profile with a second option
+            $sender->EventArguments['MemberOptions'][] = [
+                'Text' => $text,
+                'Url' => $url,
+                'CssClass' => 'KickButton Hijack'
+            ];
+        } else {
+            // Add some styling.
+            echo '<style>.KickButton{margin-right:4px}</style>';
+            // Show button on profile.
+            echo anchor(
+                $text,
+                $url,
+                [
+                    'class' => 'NavButton KickButton Hijack',
+                    // 'onClick' => 'gdn.inform("kicked");'
+                ]
+            );
+        }
+
+
+
+
         /*
-        $sender->EventArguments['MemberOptions'][] = [
-            'Text' => sprite('SpKick').' '.t('Kick'),
-            'Url' => '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey(),
-            'CssClass' => 'KickUser Hijack'
-        ];
+         * This could be used if you would like to have a kick/message dropdown
         */
     }
 
@@ -115,13 +130,10 @@ class KickAssPlugin extends Gdn_Plugin {
         $profileUser = $userModel->getID($profileUserID);
 
         $activityModel = new activityModel();
-        //  public function add($ActivityUserID, $ActivityType, $Story = null, $RegardingUserID = null, $CommentActivityID = null, $Route = null, $SendEmail = '')
-
-
-        $activityModel->add(
+        $activityID = $activityModel->add(
             Gdn::session()->UserID, // ActivityUserID
             'Kick', // ActivityType
-            '', // Story
+            'story dynamic.', // Story
             $profileUserID, // RegardingUserID
             '', // CommentActivityID
             userUrl($profileUser), // Route
