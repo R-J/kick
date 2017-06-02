@@ -2,7 +2,7 @@
 $PluginInfo['kick'] = [
     'Name' => 'Kick',
     'Description' => 'Adds a button to users profiles which when clicked sends a short notification to the profile user.',
-    'Version' => '0.0.1',
+    'Version' => '0.1.0',
     'RequiredApplications' => ['Vanilla' => '>= 2.3'],
     'SettingsPermission' => 'Garden.Settings.Manage',
     'MobileFriendly' => true,
@@ -14,8 +14,6 @@ $PluginInfo['kick'] = [
 
 class KickAssPlugin extends Gdn_Plugin {
     public function setup() {
-         // Default notification values. These values will only apply for users
-         // who haven't configured their notificaitions yet.
         touchConfig('kick.UseDropDownButton', false);
         touchConfig('Preferences.Popup.Kick', 1);
         touchConfig('Preferences.Email.Kick', 0);
@@ -51,10 +49,9 @@ class KickAssPlugin extends Gdn_Plugin {
                 'Public' => '0'
             ]
         );
-
-        // Loop through all users and add notification setting if needed.
-        // TODO!
     }
+
+
 
     /**
      * Add notification options for users.
@@ -64,8 +61,8 @@ class KickAssPlugin extends Gdn_Plugin {
      * @return void.
      */
     public function profileController_afterPreferencesDefined_handler($sender) {
-        $sender->Preferences['Notifications']['Email.Kick'] = t('Notify me when someone kicked my ass.');
-        $sender->Preferences['Notifications']['Popup.Kick'] = t('Notify me when someone kicked my ass');
+        $sender->Preferences['Notifications']['Email.Kick'] = t('Notify me when someone kicked me.');
+        $sender->Preferences['Notifications']['Popup.Kick'] = t('Notify me when someone kicked me.');
     }
 
     /**
@@ -83,13 +80,13 @@ class KickAssPlugin extends Gdn_Plugin {
         if ($profileUserID == $sessionUserID || $sessionUserID < 1) {
             return;
         }
-decho($sender->User->Preferences);
-decho(val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', true)));
+
         // Ensure that button is only shown if user would get a notification.
-        if (
-            val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', true)) === false &&
-            val('Email.Kick', $sender->User->Preferences, c('Preferences.Email.Kick', false)) === false
-            ) {
+        $defaultPopup = c('Preferences.Popup.Kick', true);
+        $defaultEmail = c('Preferences.Email.Kick', false);
+        $userConfigPopup = val('Popup.Kick', $sender->User->Preferences, $defaultPopup);
+        $userConfigEmail = val('Email.Kick', $sender->User->Preferences, $defaultEmail);
+        if ($userConfigPopup == false && $userConfigEmail == false) {
             return;
         }
 
@@ -110,21 +107,18 @@ decho(val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', 
             echo anchor(
                 $text,
                 $url,
-                [
-                    'class' => 'NavButton KickButton Hijack',
-                    // 'onClick' => 'gdn.informMessage('t("You've');'
-                ]
+                ['class' => 'NavButton KickButton Hijack']
             );
         }
-
-
-
-
-        /*
-         * This could be used if you would like to have a kick/message dropdown
-        */
     }
 
+    /**
+     * Send notification to a profile user and gives feedback to visitor.
+     *
+     * @param PluginController $sender Instance of the calling object.
+     *
+     * @return string Json encoded status of the action.
+     */
     public function pluginController_kick_create($sender) {
         if (!Gdn::session()->validateTransientKey(Gdn::request()->get('tk', false))) {
             throw permissionException();
@@ -139,6 +133,7 @@ decho(val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', 
         $userModel = new UserModel();
         $profileUser = $userModel->getID($profileUserID);
 
+        // Create a new activity.
         $activityModel = new activityModel();
         $activityID = $activityModel->add(
             Gdn::session()->UserID, // ActivityUserID
@@ -151,9 +146,18 @@ decho(val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', 
         );
 
         // Give acting user feedback.
+        if ($activityID) {
+            $message = 'You\'ve kicked %1$s!';
+        } else {
+            $message = 'Kicking %1$s failed!';
+        }
+        $feedback = sprintf(
+            t($message),
+            htmlspecialchars($profileUser->Name)
+        );
         echo json_encode(['InformMessages' =>  [
             [
-                'Message' => t("You've kicked ass!"),
+                'Message' => $feedback,
                 'CssClass' => 'Dismissable AutoDismiss',
             ]
         ]]);
