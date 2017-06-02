@@ -1,6 +1,6 @@
 <?php
-$PluginInfo['kickAss'] = [
-    'Name' => 'Kick Ass',
+$PluginInfo['kick'] = [
+    'Name' => 'Kick',
     'Description' => 'Adds a button to users profiles which when clicked sends a short notification to the profile user.',
     'Version' => '0.0.1',
     'RequiredApplications' => ['Vanilla' => '>= 2.3'],
@@ -25,7 +25,7 @@ class KickAssPlugin extends Gdn_Plugin {
     public function structure() {
         $activityModel = new ActivityModel();
         $activityModel->defineType(
-            'KickAss',
+            'Kick',
             [
                 'AllowComments' => false,
                 'ShowIcon' => true,
@@ -54,26 +54,20 @@ class KickAssPlugin extends Gdn_Plugin {
      * @return void.
      */
     public function profileController_afterPreferencesDefined_handler($sender) {
-        $sender->Preferences['Notifications']['Email.KickAss'] = t('Notify me when someone kicked my ass.');
-        $sender->Preferences['Notifications']['Popup.KickAss'] = t('Notify me when someone kicked my ass');
+        $sender->Preferences['Notifications']['Email.Kick'] = t('Notify me when someone kicked my ass.');
+        $sender->Preferences['Notifications']['Popup.Kick'] = t('Notify me when someone kicked my ass');
     }
 
-    public function profileController_beforeInfo_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
-    }
-    public function profileController_onBasicInfo_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
-    }
-    public function profileController_afterInfo_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
-    }
-    public function profileController_UsernameMeta_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
-    }
-    public function profileController_BeforeUserInfo_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
-    }
-    public function profileController_AfterUserInfo_create($sender, $args) {
-        echo '<h3>'.__METHOD__.'</h3>';
+    public function profileController_afterUserInfo_handler($sender, $args) {
+        if ($sender->User->UserID == Gdn::session()->UserID) {
+            return;
+        }
+        echo '<div class="KickContainer">';
+        echo anchor(
+            t('Kick'),
+            '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey(),
+            ['class' => 'Button']
+        );
+        echo '</div>';
     }
 }
