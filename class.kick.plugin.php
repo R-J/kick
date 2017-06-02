@@ -83,6 +83,15 @@ class KickAssPlugin extends Gdn_Plugin {
         if ($profileUserID == $sessionUserID || $sessionUserID < 1) {
             return;
         }
+decho($sender->User->Preferences);
+decho(val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', true)));
+        // Ensure that button is only shown if user would get a notification.
+        if (
+            val('Popup.Kick', $sender->User->Preferences, c('Preferences.Popup.Kick', true)) === false &&
+            val('Email.Kick', $sender->User->Preferences, c('Preferences.Email.Kick', false)) === false
+            ) {
+            return;
+        }
 
         $text = trim(sprite('SpKick').' '.t('Kick'));
         $url = '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
@@ -103,7 +112,7 @@ class KickAssPlugin extends Gdn_Plugin {
                 $url,
                 [
                     'class' => 'NavButton KickButton Hijack',
-                    // 'onClick' => 'gdn.inform("kicked");'
+                    // 'onClick' => 'gdn.informMessage('t("You've');'
                 ]
             );
         }
@@ -126,6 +135,7 @@ class KickAssPlugin extends Gdn_Plugin {
             throw notFoundException('User');
         }
 
+        // Needed for getting the users url.
         $userModel = new UserModel();
         $profileUser = $userModel->getID($profileUserID);
 
@@ -133,13 +143,19 @@ class KickAssPlugin extends Gdn_Plugin {
         $activityID = $activityModel->add(
             Gdn::session()->UserID, // ActivityUserID
             'Kick', // ActivityType
-            'story dynamic.', // Story
+            '', // Story
             $profileUserID, // RegardingUserID
             '', // CommentActivityID
             userUrl($profileUser), // Route
             '' // SendEmail
         );
 
-        echo json_encode(['InformMessages' => t("You've kicked ass!")]);
+        // Give acting user feedback.
+        echo json_encode(['InformMessages' =>  [
+            [
+                'Message' => t("You've kicked ass!"),
+                'CssClass' => 'Dismissable AutoDismiss',
+            ]
+        ]]);
     }
 }
