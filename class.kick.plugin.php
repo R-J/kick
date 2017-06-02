@@ -5,6 +5,7 @@ $PluginInfo['kick'] = [
     'Version' => '0.1.0',
     'RequiredApplications' => ['Vanilla' => '>= 2.3'],
     'SettingsPermission' => 'Garden.Settings.Manage',
+    'SettingsUrl' => 'settings/kick',
     'MobileFriendly' => true,
     'HasLocale' => true,
     'Author' => 'Robin Jurinka',
@@ -51,6 +52,22 @@ class KickAssPlugin extends Gdn_Plugin {
         );
     }
 
+    public function settingsController_kick_create($sender) {
+        $sender->permission('Garden.Settings.Manage');
+        $sender->title(t('Kick Settings'));
+        $sender->addSideMenu('dashboard/settings/plugins');
+
+        $configurationModule = new ConfigurationModule($sender);
+        $configurationModule->initialize(
+            [
+                'kick.UseDropDownButton' => [
+                    'Control' => 'CheckBox',
+                    'Description' => 'Take influence on how the button is displayed on users profiles.'
+                ]
+            ]
+        );
+        $configurationModule->renderAll();
+    }
 
 
     /**
