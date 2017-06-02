@@ -49,7 +49,7 @@ class KickAssPlugin extends Gdn_Plugin {
     /**
      * Add notification options for users.
      *
-     * @param ProfileCOntroller $sender Instance of the calling object.
+     * @param ProfileController $sender Instance of the calling object.
      *
      * @return void.
      */
@@ -58,16 +58,64 @@ class KickAssPlugin extends Gdn_Plugin {
         $sender->Preferences['Notifications']['Popup.Kick'] = t('Notify me when someone kicked my ass');
     }
 
-    public function profileController_afterUserInfo_handler($sender, $args) {
-        if ($sender->User->UserID == Gdn::session()->UserID) {
+    /**
+     * Add button to profile.
+     *
+     * @param ProfileController $sender Instance of the calling object.
+     *
+     * @return void.
+     */
+   public function profileController_beforeProfileOptions_handler($sender) {
+        $sessionUserID = Gdn::session()->UserID;
+        $profileUserID = $sender->User->UserID;
+        if ($profileUserID == $sessionUserID || $sessionUserID < 1) {
+            // Exit if this is visitors own profile or visitor is guest.
             return;
         }
-        echo '<div class="KickContainer">';
+
+        // echo '<div class="KickWrapper">';
         echo anchor(
-            t('Kick'),
-            '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey(),
-            ['class' => 'Button']
+            trim(sprite('SpKick').' '.t('Kick')),
+            '/plugin/kick/'.$sender->User->UserID.'?tk='.Gdn::session()->transientKey(),
+            [
+                'class' => 'Button NavButton KickButton Hijack',
+                // 'onClick' => 'gdn.inform("kicked");'
+            ]
         );
-        echo '</div>';
+        // echo '</div>';
+        /*
+        $sender->EventArguments['MemberOptions'][] = [
+            'Text' => sprite('SpKick').' '.t('Kick'),
+            'Url' => '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey(),
+            'CssClass' => 'KickUser Hijack'
+        ];
+        */
+    }
+
+    public function pluginController_kick_create($sender) {
+        if (!Gdn::session()->validateTransientKey(Gdn::request()->get('tk', false))) {
+            throw permissionException();
+            return;
+        }
+        $profileUserID = val(0, $sender->RequestArgs, 0);
+        if ($profileUserID < 1) {
+            throw notFoundException('User');
+        }
+
+        $activityModel = new activityModel();
+        //  public function add($ActivityUserID, $ActivityType, $Story = null, $RegardingUserID = null, $CommentActivityID = null, $Route = null, $SendEmail = '')
+
+
+        $activityModel->add(
+            Gdn::session()->UserID, // ActivityUserID
+            'Kick', // ActivityType
+            null, // Story
+            profileUserID, // RegardingUserID
+            null, // CommentActivityID
+            'profile', // 'link target', // Route
+            '' // SendEmail
+        );
+
+        echo json_encode(['InformMessages' => t("You've kicked ass!")]);
     }
 }
