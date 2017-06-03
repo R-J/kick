@@ -2,7 +2,7 @@
 $PluginInfo['kick'] = [
     'Name' => 'Kick',
     'Description' => 'Adds a button to users profiles which when clicked sends a short notification to the profile user.',
-    'Version' => '0.1.0',
+    'Version' => '0.2.0',
     'RequiredApplications' => ['Vanilla' => '>= 2.3'],
     'SettingsPermission' => 'Garden.Settings.Manage',
     'SettingsUrl' => 'settings/kick',
