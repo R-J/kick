@@ -108,7 +108,7 @@ class KickAssPlugin extends Gdn_Plugin {
         }
 
         $text = trim(sprite('SpKick').' '.t('Kick'));
-        $url = '/plugin/kick/'.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
+        $url = '/plugin/kick?id='.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
 
         if (c('kick.UseDropDownButton', false)) {
             // Enhance messge button on profile with a second option
@@ -141,7 +141,7 @@ class KickAssPlugin extends Gdn_Plugin {
             throw permissionException();
             return;
         }
-        $profileUserID = val(0, $sender->RequestArgs, 0);
+        $profileUserID = Gdn::request()->get('id', 0);
         if ($profileUserID < 1) {
             throw notFoundException('User');
         }
