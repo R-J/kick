@@ -1,0 +1,19 @@
+{
+    "key": "kick",
+    "name": "Kick",
+    "description": "Adds a button to users profiles which when clicked sends a short notification to the profile user.",
+    "authors": [
+        {
+            "name": "Robin Jurinka",
+            "homepage": "open.vanillaforums.com/profile/r-j"
+        }
+    ],
+    "documentationUrl": "https://github.com/r-j/kick",
+    "hasLocale": true,
+    "license": "MIT",
+    "mobileFriendly": true,
+    "pluginUrl": "https://github.com/r-j/kick",
+    "settingsUrl": "/settings/kick",
+    "type": "addon",
+    "version": "0.3.0"
+}
