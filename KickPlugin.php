@@ -96,7 +96,12 @@ class KickAssPlugin extends Gdn_Plugin {
             return;
         }
         $text = trim(sprite('SpKick').' '.t('Kick'));
-        $url = '/plugin/kick?id='.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
+        if (Gdn::config('Garden.Registration.NameUnique') == true) {
+            $url = '/plugin/kick/'.rawurlencode($sender->User->Name);
+        } else {
+            $url = '/plugin/kick/'.$sender->User->UserID;
+        }
+
         if (Gdn::config('kick.UseDropDownButton', false)) {
             // Enhance message button on profile with a second option.
             $args['MemberOptions'][] = [
@@ -108,7 +113,7 @@ class KickAssPlugin extends Gdn_Plugin {
             $this->kickButton = anchor(
                 $text,
                 $url,
-                'NavButton KickButton'
+                'NavButton KickButton Hijack'
             ).' ';
         }
     }
@@ -159,25 +164,24 @@ class KickAssPlugin extends Gdn_Plugin {
     }
 
     /**
-     * Send notification to a profile user and gives feedback to visitor.
+     * Send notification to a profile user and gives feedback to actor.
      *
-     * @param PluginController $sender Instance of the calling object.
+     * @param PluginController $sender Instance of the calling class.
+     * @param integer|string ID/name of the user to kick.
      *
-     * @return string Json encoded status of the action.
+     * @return string The blank view.
      */
-    public function pluginController_kick_create($sender) {
-        if (!Gdn::session()->validateTransientKey(Gdn::request()->get('tk', false))) {
-            throw permissionException();
-            return;
-        }
-        $profileUserID = Gdn::request()->get('id', 0);
-        if ($profileUserID < 1) {
-            throw notFoundException('User');
+    public function pluginController_kick_create($sender, $args) {
+        if (!Gdn::request()->isAuthenticatedPostBack(true)) {
+            throw new Exception('Requires POST', 405);
         }
 
-        // Needed for getting the users url.
-        $userModel = new UserModel();
-        $profileUser = $userModel->getID($profileUserID);
+        // Get user.
+        if (is_numeric($args[0])) {
+            $profileUser = Gdn::userModel()->getID($args[0]);
+        } else {
+            $profileUser = Gdn::userModel()->getByUsername($args[0]);
+        }
 
         // Create a new activity.
         $activityModel = new activityModel();
@@ -185,7 +189,7 @@ class KickAssPlugin extends Gdn_Plugin {
             Gdn::session()->UserID, // ActivityUserID
             'Kick', // ActivityType
             '', // Story
-            $profileUserID, // RegardingUserID
+            $profileUser->UserID, // RegardingUserID
             '', // CommentActivityID
             userUrl($profileUser), // Route
             '' // SendEmail
@@ -197,15 +201,12 @@ class KickAssPlugin extends Gdn_Plugin {
         } else {
             $message = 'Kicking %1$s failed!';
         }
-        $feedback = sprintf(
-            t($message),
-            htmlspecialchars($profileUser->Name)
+        $sender->informMessage(
+            sprintf(
+                t($message),
+                htmlspecialchars($profileUser->Name)
+            )
         );
-        echo json_encode(['InformMessages' =>  [
-            [
-                'Message' => $feedback,
-                'CssClass' => 'Dismissable AutoDismiss',
-            ]
-        ]]);
+        $sender->render('blank', 'utility', 'dashboard');
     }
 }

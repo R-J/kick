@@ -12,3 +12,14 @@
     }
     ?>
 </div>
+<script>
+[].forEach.call(document.querySelectorAll('.ProfileOptions a'), function(el) {
+    if (el.getAttribute('href').indexOf('/plugin/kick/') != -1) {
+        console.log(el.href);
+
+        if (!el.classList.contains('Hijack')) {
+            el.classList.add('Hijack');
+        }
+    }
+});
+</script>
