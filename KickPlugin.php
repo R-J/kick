@@ -76,7 +76,7 @@ class KickAssPlugin extends Gdn_Plugin {
      *
      * @return void.
      */
-   public function profileController_beforeProfileOptions_handler($sender) {
+   public function profileController_beforeProfileOptions_handler($sender, $args) {
         $sessionUserID = Gdn::session()->UserID;
         $profileUserID = $sender->User->UserID;
 
@@ -86,10 +86,10 @@ class KickAssPlugin extends Gdn_Plugin {
         }
 
         // Ensure that button is only shown if user would get a notification.
-        $defaultPopup = c('Preferences.Popup.Kick', true);
-        $defaultEmail = c('Preferences.Email.Kick', false);
-        $userConfigPopup = val('Popup.Kick', $sender->User->Preferences, $defaultPopup);
-        $userConfigEmail = val('Email.Kick', $sender->User->Preferences, $defaultEmail);
+        $defaultPopup = Gdn::config('Preferences.Popup.Kick', true);
+        $defaultEmail = Gdn::config('Preferences.Email.Kick', false);
+        $userConfigPopup = $sender->User->Preferences['Popup.Kick'] ?? $defaultPopup;
+        $userConfigEmail = $sender->User->Preferences['Email.Kick'] ?? $defaultEmail;
         if ($userConfigPopup == false && $userConfigEmail == false) {
             return;
         }
@@ -97,23 +97,38 @@ class KickAssPlugin extends Gdn_Plugin {
         $text = trim(sprite('SpKick').' '.t('Kick'));
         $url = '/plugin/kick?id='.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
 
-        if (c('kick.UseDropDownButton', false)) {
-            // Enhance messge button on profile with a second option
-            $sender->EventArguments['MemberOptions'][] = [
+        if (Gdn::config('kick.UseDropDownButton', false)) {
+            // Enhance message button on profile with a second option
+            $args['MemberOptions'][] = [
                 'Text' => $text,
                 'Url' => $url,
                 'CssClass' => 'KickButton Hijack'
             ];
         } else {
-            // Add some styling.
-            echo '<style>.KickButton{margin-right:4px}</style>';
-            // Show button on profile.
-            echo anchor(
-                $text,
-                $url,
-                ['class' => 'NavButton KickButton Hijack']
-            );
+            $args['ProfileOptions'][] = [
+                'Text' => $text,
+                'Url' => $url,
+                'CssClass' => 'KickButton Hijack'
+            ];
         }
+    }
+
+
+    public function profileController_afterAddSideMenu_handler($sender, $args) {
+        $module = $sender->Assets['Content']['ProfileOptionsModule'] ?? null;
+        // Only proceed if the module is available.
+        if (!$module) {
+            return;
+        }
+        // Don't change view if no separate button is needed
+        if (Gdn::config('kick.UseDropDownButton', false)) {
+            return;
+        }
+        $module->setView(Gdn::controller()->fetchViewLocation('profileoptions', '', '/plugins/kick'));
+    }
+
+    public function profileOptionsModule_render_before($sender) {
+        decho(__LINE__); die;
     }
 
     /**
