@@ -1,6 +1,14 @@
 <?php
 
 class KickAssPlugin extends Gdn_Plugin {
+    /** @var string HTML markup of the additional profile options button */
+    private $kickButton = '';
+
+    /**
+     * Init some sane config defaults on plugin activation and required db changes.
+     *
+     * @return void.
+     */
     public function setup() {
         touchConfig('kick.UseDropDownButton', false);
         touchConfig('Preferences.Popup.Kick', 1);
@@ -39,10 +47,17 @@ class KickAssPlugin extends Gdn_Plugin {
         );
     }
 
+    /**
+     * Simple settings for choosing a dedicated "Kick Ass" button or a dropdown.
+     *
+     * @param SettingsController $sender Instance of the calling class.
+     *
+     * @return void.
+     */
     public function settingsController_kick_create($sender) {
         $sender->permission('Garden.Settings.Manage');
         $sender->title(t('Kick Settings'));
-        $sender->addSideMenu('dashboard/settings/plugins');
+        $sender->setHighlightRoute('dashboard/settings/plugins');
 
         $configurationModule = new ConfigurationModule($sender);
         $configurationModule->initialize(
@@ -60,7 +75,7 @@ class KickAssPlugin extends Gdn_Plugin {
     /**
      * Add notification options for users.
      *
-     * @param ProfileController $sender Instance of the calling object.
+     * @param ProfileController $sender Instance of the calling class.
      *
      * @return void.
      */
@@ -76,59 +91,71 @@ class KickAssPlugin extends Gdn_Plugin {
      *
      * @return void.
      */
-   public function profileController_beforeProfileOptions_handler($sender, $args) {
-        $sessionUserID = Gdn::session()->UserID;
-        $profileUserID = $sender->User->UserID;
-
-        // Exit if this is the visitors own profile or visitor is guest.
-        if ($profileUserID == $sessionUserID || $sessionUserID < 1) {
+    public function profileController_beforeProfileOptions_handler($sender, $args) {
+        if (!$this->showButton($sender->User)) {
             return;
         }
-
-        // Ensure that button is only shown if user would get a notification.
-        $defaultPopup = Gdn::config('Preferences.Popup.Kick', true);
-        $defaultEmail = Gdn::config('Preferences.Email.Kick', false);
-        $userConfigPopup = $sender->User->Preferences['Popup.Kick'] ?? $defaultPopup;
-        $userConfigEmail = $sender->User->Preferences['Email.Kick'] ?? $defaultEmail;
-        if ($userConfigPopup == false && $userConfigEmail == false) {
-            return;
-        }
-
         $text = trim(sprite('SpKick').' '.t('Kick'));
         $url = '/plugin/kick?id='.$sender->User->UserID.'&tk='.Gdn::session()->transientKey();
-
         if (Gdn::config('kick.UseDropDownButton', false)) {
-            // Enhance message button on profile with a second option
+            // Enhance message button on profile with a second option.
             $args['MemberOptions'][] = [
                 'Text' => $text,
                 'Url' => $url,
                 'CssClass' => 'KickButton Hijack'
             ];
         } else {
-            $args['ProfileOptions'][] = [
-                'Text' => $text,
-                'Url' => $url,
-                'CssClass' => 'KickButton Hijack'
-            ];
+            $this->kickButton = anchor(
+                $text,
+                $url,
+                'NavButton KickButton'
+            ).' ';
         }
     }
 
-
-    public function profileController_afterAddSideMenu_handler($sender, $args) {
+    /**
+     * Change ProfileOptionsModule if needed.
+     *
+     * @param ProfileController $sender Instance of the calling class.
+     *
+     * @return void.
+     */
+    public function profileController_afterAddSideMenu_handler($sender) {
         $module = $sender->Assets['Content']['ProfileOptionsModule'] ?? null;
         // Only proceed if the module is available.
         if (!$module) {
             return;
         }
-        // Don't change view if no separate button is needed
-        if (Gdn::config('kick.UseDropDownButton', false)) {
-            return;
-        }
+        // Use custom view for ProfileOptions.
         $module->setView(Gdn::controller()->fetchViewLocation('profileoptions', '', '/plugins/kick'));
+        // Add KickButton markup.
+        $module->setData('KickButton', $this->kickButton);
     }
 
-    public function profileOptionsModule_render_before($sender) {
-        decho(__LINE__); die;
+    /**
+     * Helper function to decide whether a button should be displayed or not.
+     *
+     * @param Object $profileUser The profile user.
+     *
+     * @return boolean Whether a button should be shown.
+     */
+    private function showButton($profileUser) {
+        // Exit if this is the visitors own profile or visitor is a guest.
+        $sessionUserID = Gdn::session()->UserID;
+        if ($profileUser->UserID == $sessionUserID || $sessionUserID < 1) {
+            return false;
+        }
+
+        // Ensure that button is only shown if user would get a notification.
+        $defaultPopup = Gdn::config('Preferences.Popup.Kick', true);
+        $defaultEmail = Gdn::config('Preferences.Email.Kick', false);
+        $userConfigPopup = $profileUser->Preferences['Popup.Kick'] ?? $defaultPopup;
+        $userConfigEmail = $profileUser->Preferences['Email.Kick'] ?? $defaultEmail;
+        if ($userConfigPopup == false && $userConfigEmail == false) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
