@@ -163,6 +163,40 @@ class KickAssPlugin extends Gdn_Plugin {
         return true;
     }
 
+    public function base_afterFlag_handler($sender, $args) {
+        if ($this->showButton($args['Author']) == false) {
+            return;
+        }
+
+        if (isset($args['Comment'])) {
+            $postType = 'Comment';
+        } else {
+            $postType = 'Discussion';
+        }
+            echo $this->getKickButton($sender, $args, $postType);
+    }
+
+    protected function getKickButton($sender, $args, $postType = 'Comment') {
+        if (Gdn::config('Garden.Registration.NameUnique') == true) {
+            $user = rawurlencode($args['Author']->Name);
+        } else {
+            $user = $args['Author']->UserID;
+        }
+        $url = sprintf(
+            '/plugin/kick/%s/%s/%u/%s',
+            $user,
+            strtolower($postType),
+            $args[$postType]->{$postType.'ID'},
+            Gdn_Format::url($args['Discussion']->Name)
+        );
+
+        $result = Gdn_Theme::bulletItem('Flags');
+        $result .= anchor(sprite('ReactKick ReactInfraction', 'ReactSprite').t('Kick'), $url, 'ReactButton Kick Hijack').' ';
+
+        return $result;
+    }
+
+
     /**
      * Send notification to a profile user and gives feedback to actor.
      *
